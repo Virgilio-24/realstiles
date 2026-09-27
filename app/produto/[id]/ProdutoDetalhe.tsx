@@ -11,11 +11,12 @@ import type { Produto } from '@/lib/produtos';
 import { estadoPromocao } from '@/lib/promocao';
 import ContagemPromocao from '@/components/ContagemPromocao';
 import { onAuthChange, getPerfil } from '@/lib/auth';
-import { getComentariosProduto, getComentarioCliente, podeAvaliar, criarComentario } from '@/lib/comentarios';
+import { getComentariosProduto, getComentarioCliente, podeAvaliar, criarComentario, MAX_IMAGENS_COMENTARIO } from '@/lib/comentarios';
+import { uploadParaCloudinary } from '@/lib/cloudinary';
 import type { ComentarioProduto } from '@/lib/comentarios';
 import { formatarData } from '@/lib/encomendas';
 import type { User } from 'firebase/auth';
-import { Frown, AlertTriangle, Link as LinkIcon, X, ZoomIn } from 'lucide-react';
+import { Frown, AlertTriangle, Link as LinkIcon, X, ZoomIn, Play, ImagePlus } from 'lucide-react';
 
 const COR_MAP: Record<string, string> = {
   'preto':'#111','branco':'#fff','cinzento':'#888','cinza':'#888',
@@ -74,6 +75,9 @@ export default function ProdutoDetalhe({
   const [formEstrelas, setFormEstrelas] = useState(0);
   const [formTexto, setFormTexto] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [formImagens, setFormImagens] = useState<string[]>([]);
+  const [enviandoImagem, setEnviandoImagem] = useState(false);
+  const [imagemAberta, setImagemAberta] = useState<string | null>(null);
 
   useEffect(() => {
     getComentariosProduto(id).then(setComentarios).catch(() => {});
@@ -85,10 +89,38 @@ export default function ProdutoDetalhe({
         getComentarioCliente(id, u.uid).catch(() => null),
       ]);
       setPodeComentar(pode);
-      if (meu) setMeuComentario(meu);
+      if (meu) {
+        setMeuComentario(meu);
+        // Pré-preencher para editar sem perder o que já tinha (incl. imagens)
+        setFormEstrelas(meu.estrelas || 0);
+        setFormTexto(meu.texto || '');
+        setFormImagens(meu.imagens || []);
+      }
     });
     return unsub;
   }, [id]);
+
+  const adicionarImagensComentario = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const ficheiros = Array.from(e.target.files || []);
+    e.target.value = '';
+    const livres = MAX_IMAGENS_COMENTARIO - formImagens.length;
+    if (ficheiros.length > livres) mostrarToast(`Máximo de ${MAX_IMAGENS_COMENTARIO} imagens`, 'error');
+    const validos = ficheiros.slice(0, livres).filter(f => {
+      if (!f.type.startsWith('image/')) { mostrarToast('Só são permitidas imagens', 'error'); return false; }
+      if (f.size > 10 * 1024 * 1024) { mostrarToast('Imagem demasiado grande (máx. 10 MB)', 'error'); return false; }
+      return true;
+    });
+    if (!validos.length) return;
+    setEnviandoImagem(true);
+    try {
+      const urls = await Promise.all(validos.map(f => uploadParaCloudinary(f)));
+      setFormImagens(imgs => [...imgs, ...urls].slice(0, MAX_IMAGENS_COMENTARIO));
+    } catch {
+      mostrarToast('Erro ao enviar imagem', 'error');
+    } finally {
+      setEnviandoImagem(false);
+    }
+  };
 
   const enviarComentario = async () => {
     if (!user || formEstrelas === 0) return;
@@ -96,7 +128,7 @@ export default function ProdutoDetalhe({
     try {
       const perfil = await getPerfil(user.uid);
       const nome = perfil?.nome || user.displayName || 'Cliente';
-      await criarComentario(id, user.uid, nome, formTexto, formEstrelas);
+      await criarComentario(id, user.uid, nome, formTexto, formEstrelas, formImagens);
       const [novosComentarios, meu] = await Promise.all([
         getComentariosProduto(id),
         getComentarioCliente(id, user.uid),
@@ -158,10 +190,14 @@ export default function ProdutoDetalhe({
   );
 
   const imagens = produto.imagens?.length ? produto.imagens : [];
-  const temVarias = imagens.length > 1;
+  // O vídeo entra na galeria como último item, depois das imagens
+  const video = produto.video || null;
+  const totalMidias = imagens.length + (video ? 1 : 0);
+  const temVarias = totalMidias > 1;
+  const mostrarVideo = !!video && imgIdx === imagens.length;
 
   const irParaImagem = (idx: number) => {
-    const next = (idx + imagens.length) % imagens.length;
+    const next = (idx + totalMidias) % totalMidias;
     setFade(true);
     setTimeout(() => { setImgIdx(next); setFade(false); }, 150);
   };
@@ -214,6 +250,15 @@ export default function ProdutoDetalhe({
                     <Image src={src} alt={`${produto.nome} ${i + 1}`} fill style={{ objectFit: 'cover' }} sizes="72px" />
                   </button>
                 ))}
+                {video && (
+                  <button
+                    className={`pd-thumb pd-thumb-video${mostrarVideo ? ' active' : ''}`}
+                    onClick={() => irParaImagem(imagens.length)}
+                    aria-label="Ver vídeo"
+                  >
+                    <Play size={22} strokeWidth={1.5} fill="currentColor" />
+                  </button>
+                )}
               </div>
             )}
 
@@ -221,8 +266,8 @@ export default function ProdutoDetalhe({
             <div className="pd-main-wrap">
               <div
                 className="pd-main"
-                style={{ cursor: imagens[imgIdx] ? 'zoom-in' : undefined }}
-                onClick={() => { if (imagens[imgIdx]) setZoomAberto(true); }}
+                style={{ cursor: !mostrarVideo && imagens[imgIdx] ? 'zoom-in' : undefined }}
+                onClick={() => { if (!mostrarVideo && imagens[imgIdx]) setZoomAberto(true); }}
                 onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
                 onTouchEnd={e => {
                   const dx = e.changedTouches[0].clientX - touchStartX.current;
@@ -239,10 +284,21 @@ export default function ProdutoDetalhe({
                     priority
                   />
                 )}
+                {mostrarVideo && (
+                  <video
+                    key={video}
+                    src={video}
+                    className="pd-video"
+                    controls
+                    playsInline
+                    preload="metadata"
+                    style={{ opacity: fade ? 0 : 1 }}
+                  />
+                )}
                 {desconto > 0 && (
                   <span className="pd-badge-sale">-{desconto}%</span>
                 )}
-                {imagens[imgIdx] && (
+                {!mostrarVideo && imagens[imgIdx] && (
                   <span className="pd-zoom-hint"><ZoomIn size={16} strokeWidth={1.5} /></span>
                 )}
               </div>
@@ -251,14 +307,14 @@ export default function ProdutoDetalhe({
               {temVarias && (
                 <>
                   <button className="pd-arrow prev" onClick={() => irParaImagem(imgIdx - 1)} disabled={imgIdx === 0}>&#8249;</button>
-                  <button className="pd-arrow next" onClick={() => irParaImagem(imgIdx + 1)} disabled={imgIdx === imagens.length - 1}>&#8250;</button>
+                  <button className="pd-arrow next" onClick={() => irParaImagem(imgIdx + 1)} disabled={imgIdx === totalMidias - 1}>&#8250;</button>
                 </>
               )}
 
               {/* Dots */}
               {temVarias && (
                 <div className="pd-dots">
-                  {imagens.map((_, i) => (
+                  {Array.from({ length: totalMidias }, (_, i) => (
                     <button key={i} className={`pd-dot${i === imgIdx ? ' active' : ''}`} onClick={() => irParaImagem(i)} />
                   ))}
                 </div>
@@ -442,10 +498,27 @@ export default function ProdutoDetalhe({
                 placeholder="O que achaste do produto? (opcional)"
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--gray-200)', fontSize: 14, fontFamily: 'Inter, sans-serif', resize: 'vertical', minHeight: 70, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
               />
+              <div className="av-imagens">
+                {formImagens.map((src, i) => (
+                  <div key={src} className="av-imagem">
+                    <Image src={src} alt={`Imagem ${i + 1}`} fill style={{ objectFit: 'cover' }} sizes="72px" />
+                    <button type="button" className="img-preview-remove" onClick={() => setFormImagens(imgs => imgs.filter(x => x !== src))} aria-label="Remover imagem">
+                      <X size={12} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                ))}
+                {formImagens.length < MAX_IMAGENS_COMENTARIO && (
+                  <label className={`av-imagem-add${enviandoImagem ? ' a-enviar' : ''}`}>
+                    {enviandoImagem ? <div className="spinner" /> : <ImagePlus size={20} strokeWidth={1.5} />}
+                    <span>{enviandoImagem ? 'A enviar' : 'Foto'}</span>
+                    <input type="file" accept="image/*" multiple hidden disabled={enviandoImagem} onChange={adicionarImagensComentario} />
+                  </label>
+                )}
+              </div>
               <button
                 className="btn btn-primary btn-sm"
                 onClick={enviarComentario}
-                disabled={enviandoComentario || formEstrelas === 0}
+                disabled={enviandoComentario || enviandoImagem || formEstrelas === 0}
               >
                 {enviandoComentario ? 'A publicar...' : meuComentario ? 'Actualizar avaliação' : 'Publicar avaliação'}
               </button>
@@ -466,11 +539,31 @@ export default function ProdutoDetalhe({
                     <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>{formatarData(c.criado_em)}</span>
                   </div>
                   {c.texto && <p style={{ fontSize: 14, color: 'var(--gray-600)', lineHeight: 1.6 }}>{c.texto}</p>}
+                  {!!c.imagens?.length && (
+                    <div className="av-imagens" style={{ marginTop: 10, marginBottom: 0 }}>
+                      {c.imagens.map((src, i) => (
+                        <button key={src} type="button" className="av-imagem" onClick={() => setImagemAberta(src)} aria-label={`Ver imagem ${i + 1}`}>
+                          <Image src={src} alt={`Imagem da avaliação de ${c.cliente_nome}`} fill style={{ objectFit: 'cover' }} sizes="72px" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </section>
+
+        {/* Imagem de avaliação ampliada */}
+        {imagemAberta && (
+          <div className="pd-zoom-overlay" onClick={() => setImagemAberta(null)}>
+            <button className="pd-zoom-close" onClick={() => setImagemAberta(null)} aria-label="Fechar">
+              <X size={22} strokeWidth={1.5} />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imagemAberta} alt="Imagem da avaliação" className="av-imagem-ampliada" onClick={e => e.stopPropagation()} />
+          </div>
+        )}
 
         {/* Relacionados */}
         {relacionados.length > 0 && (
