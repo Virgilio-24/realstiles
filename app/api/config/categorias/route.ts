@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 import { adminDb } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
@@ -55,6 +56,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const negado = await exigirAdmin(req);
+  if (negado) return negado;
+
   try {
     const { categorias } = await req.json();
     await adminDb.collection('config').doc('loja').set({ categorias }, { merge: true });

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 
 const ZP_BASE = 'https://zumbopay.com/api/public/v1';
 
-export async function GET() {
+export async function GET(req: Request) {
+  const negado = await exigirAdmin(req);
+  if (negado) return negado;
+
   try {
     const res = await fetch(`${ZP_BASE}/wallets`, {
       headers: {

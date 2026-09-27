@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { referenciaEncomendaServer } from '@/lib/referencia-server';
+import { autenticar, encomendaDoCaller } from '@/lib/api-auth';
+
+// Emails em nome da loja para o cliente — só o admin os pode disparar
+const TIPOS_ADMIN = ['estado_encomenda', 'resposta_reclamacao', 'reclamacao_resolvida'];
 
 export async function POST(req: NextRequest) {
+  const caller = await autenticar(req);
+  if (caller instanceof NextResponse) return caller;
+
   try {
     const body = await req.json();
     const { tipo } = body;
+
+    if (TIPOS_ADMIN.includes(tipo) && !caller.isAdmin) {
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+    }
+    if (tipo === 'confirmacao_encomenda' && !(await encomendaDoCaller(caller, String(body.encomenda_id)))) {
+      return NextResponse.json({ error: 'Encomenda não encontrada' }, { status: 403 });
+    }
 
     const BREVO_KEY         = process.env.BREVO_API_KEY;
     const ADMIN_EMAIL       = process.env.ADMIN_EMAIL;
@@ -153,8 +167,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, warn: `Tipo de email desconhecido: ${tipo}` });
     }
 
+    // Um cliente só pode fazer enviar emails para si próprio ou para o admin
+    const permitido = (addr: string) =>
+      caller.isAdmin || addr === ADMIN_EMAIL || addr.toLowerCase() === caller.email?.toLowerCase();
+
     const resultados = await Promise.allSettled(
-      envios.map(e => {
+      envios.filter(e => e.to.every(permitido)).map(e => {
         const m = e.from.match(/^(.*?)\s*<(.+)>$/);
         const senderName  = m ? m[1].trim() : LOJA_NOME;
         const senderEmail = m ? m[2] : e.from;

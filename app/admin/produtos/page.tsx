@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import Image from '@/components/CloudImage';
 import { ShoppingBag, X } from 'lucide-react';
 import { getTodosProdutos, criarProduto, actualizarProduto, apagarProduto, getCategorias } from '@/lib/produtos';
@@ -30,8 +31,8 @@ export default function AdminProdutosPage() {
       .catch(() => mostrarToast('Erro ao carregar produtos', 'error'))
       .finally(() => setLoading(false));
     getCategorias().then(setCategorias).catch(() => {});
-    fetch('/api/admin/sincronizar-categorias', { method: 'POST' }).catch(() => {});
-    fetch('/api/config/taxas').then(r => r.json()).then(d => setTaxas(d.itens || [])).catch(() => {});
+    apiFetch('/api/admin/sincronizar-categorias', { method: 'POST' }).catch(() => {});
+    apiFetch('/api/config/taxas').then(r => r.json()).then(d => setTaxas(d.itens || [])).catch(() => {});
   }, []);
 
   const novo = () => setSeleccionado({ ...VAZIO });

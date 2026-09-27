@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 import { adminDb } from '@/lib/firebase-admin';
 
 const TF_URL = () => process.env.TRADEFLOW_API_URL || 'http://localhost:3000';
 const TF_TOKEN = () => process.env.TRADEFLOW_ADMIN_TOKEN || '';
 
-export async function POST() {
+export async function POST(req: Request) {
+  const negado = await exigirAdmin(req);
+  if (negado) return negado;
+
   try {
     const snap = await adminDb.collection('configuracoes').doc('tradeflow').get();
     const accountId = snap.data()?.account_id;

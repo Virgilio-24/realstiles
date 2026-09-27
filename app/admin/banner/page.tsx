@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { mostrarToast } from '@/components/Toast';
 import { ICONES } from '@/lib/announcement-icons';
 import { ArrowUp, ArrowDown, X } from 'lucide-react';
@@ -20,7 +21,7 @@ export default function AdminBannerPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/config/anuncios')
+    apiFetch('/api/config/anuncios')
       .then(r => r.json())
       .then(d => { setItens(d.itens || []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -29,7 +30,7 @@ export default function AdminBannerPage() {
   const guardar = async (novosItens: ItemAnuncio[]) => {
     setSalvando(true);
     try {
-      const res = await fetch('/api/config/anuncios', {
+      const res = await apiFetch('/api/config/anuncios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ itens: novosItens }),

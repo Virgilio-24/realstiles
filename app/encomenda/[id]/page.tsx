@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import Image from '@/components/CloudImage';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -87,7 +88,7 @@ export default function EncomendaPage({ params }: { params: { id: string } }) {
     setRetryLoading(true);
     try {
       if (retryMetodo === 'cartao') {
-        const res = await fetch('/api/zumbopay/checkout', {
+        const res = await apiFetch('/api/zumbopay/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ encomenda_id: encomenda.id, amount: encomenda.total }),
@@ -98,7 +99,7 @@ export default function EncomendaPage({ params }: { params: { id: string } }) {
         return;
       }
 
-      const res = await fetch('/api/zumbopay/charges', {
+      const res = await apiFetch('/api/zumbopay/charges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

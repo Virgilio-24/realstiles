@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { mostrarToast } from '@/components/Toast';
 import { aplicarTaxas } from '@/lib/taxas';
 import type { Taxa } from '@/lib/taxas';
@@ -14,7 +15,7 @@ export default function AdminTaxasPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/config/taxas')
+    apiFetch('/api/config/taxas')
       .then(r => r.json())
       .then(d => { setItens(d.itens || []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -23,7 +24,7 @@ export default function AdminTaxasPage() {
   const guardar = async (novosItens: Taxa[]) => {
     setSalvando(true);
     try {
-      const res = await fetch('/api/config/taxas', {
+      const res = await apiFetch('/api/config/taxas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ itens: novosItens }),

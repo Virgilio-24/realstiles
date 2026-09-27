@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import Image from '@/components/CloudImage';
 import Link from 'next/link';
 import { ShoppingBag, Loader2, XCircle } from 'lucide-react';
@@ -148,7 +149,7 @@ export default function CarrinhoPage() {
       setEncomendaId(encId);
 
       if (metodo === 'cartao') {
-        const res = await fetch('/api/zumbopay/checkout', {
+        const res = await apiFetch('/api/zumbopay/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ encomenda_id: encId, amount: total }),
@@ -160,7 +161,7 @@ export default function CarrinhoPage() {
       }
 
       // M-Pesa ou e-Mola — STK push
-      const res = await fetch('/api/zumbopay/charges', {
+      const res = await apiFetch('/api/zumbopay/charges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

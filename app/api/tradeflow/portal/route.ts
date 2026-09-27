@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 
 const TF_URL = () => process.env.TRADEFLOW_API_URL || 'http://localhost:3000';
 const TF_TOKEN = () => process.env.TRADEFLOW_ADMIN_TOKEN || '';
 
 export async function POST(req: NextRequest) {
+  const negado = await exigirAdmin(req);
+  if (negado) return negado;
+
   try {
     const { account_id, return_url } = await req.json();
     if (!account_id) return NextResponse.json({ error: 'account_id obrigatório' }, { status: 400 });

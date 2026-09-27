@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { mostrarToast } from '@/components/Toast';
 import { ClipboardList, X } from 'lucide-react';
 
@@ -56,7 +57,7 @@ export default function AdminCategoriasPage() {
   const [novaCategoria, setNovaCategoria] = useState('');
 
   useEffect(() => {
-    fetch('/api/config/categorias')
+    apiFetch('/api/config/categorias')
       .then(r => r.json())
       .then(d => {
         setCategorias((d.categorias || []).map((c: Categoria) => ({
@@ -72,7 +73,7 @@ export default function AdminCategoriasPage() {
   const guardar = async (novas: Categoria[]) => {
     setSalvando(true);
     try {
-      const res = await fetch('/api/config/categorias', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ categorias: novas }) });
+      const res = await apiFetch('/api/config/categorias', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ categorias: novas }) });
       if (!res.ok) throw new Error(await res.text());
       setCategorias(novas);
       setSeeded(false);

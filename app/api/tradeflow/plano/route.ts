@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 
 const TF_URL = () => process.env.TRADEFLOW_API_URL || 'http://localhost:3000';
 const TF_TOKEN = () => process.env.TRADEFLOW_ADMIN_TOKEN || '';
 
 export async function PUT(request: Request) {
+  const negado = await exigirAdmin(request);
+  if (negado) return negado;
+
   try {
     const { account_id, plano_id, confirmado_upgrade } = await request.json();
     if (!account_id || !plano_id) return NextResponse.json({ error: 'account_id e plano_id são obrigatórios' }, { status: 400 });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -51,6 +52,9 @@ async function deduzirCreditoTemu(accountId: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const negado = await exigirAdmin(req);
+  if (negado) return negado;
+
   try {
     const dados = await req.json();
 

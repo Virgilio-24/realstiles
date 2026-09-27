@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { Mail, User, Send, Settings2 } from 'lucide-react';
 import { getDocs, collection, doc, updateDoc, addDoc, orderBy, query, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -91,7 +92,7 @@ export default function AdminReclamacoesPage() {
       if (sel.notif_canal === 'whatsapp') {
         const telLimpo = sel.telefone?.replace(/\D/g, '') || '';
         if (telLimpo) {
-          fetch('/api/notify/messages/send', {
+          apiFetch('/api/notify/messages/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -101,7 +102,7 @@ export default function AdminReclamacoesPage() {
           }).catch(() => {});
         }
       } else if (sel.email) {
-        fetch('/api/send-email', {
+        apiFetch('/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -141,7 +142,7 @@ export default function AdminReclamacoesPage() {
       if (sel.notif_canal === 'whatsapp') {
         const telLimpo = sel.telefone?.replace(/\D/g, '') || '';
         if (telLimpo) {
-          await fetch('/api/notify/messages/send', {
+          await apiFetch('/api/notify/messages/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -151,7 +152,7 @@ export default function AdminReclamacoesPage() {
           });
         }
       } else if (sel.email) {
-        await fetch('/api/send-email', {
+        await apiFetch('/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

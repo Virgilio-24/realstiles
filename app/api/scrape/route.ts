@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 
 export async function POST(req: NextRequest) {
+  const negado = await exigirAdmin(req);
+  if (negado) return negado;
+
   try {
     const { url } = await req.json();
     if (!url) return NextResponse.json({ error: 'URL em falta' }, { status: 400 });

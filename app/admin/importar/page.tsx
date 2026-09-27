@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, Suspense } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { useSearchParams } from 'next/navigation';
 import Image from '@/components/CloudImage';
 import Link from 'next/link';
@@ -76,7 +77,7 @@ function AdminImportarPage() {
 
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/import/temu?token=${token}`);
+        const res = await apiFetch(`/api/import/temu?token=${token}`);
         const data = await res.json();
         if (data.ready && data.produto) {
           clearInterval(pollingRef.current!);
@@ -98,7 +99,7 @@ function AdminImportarPage() {
     localStorage.setItem('rs_temu_token', temuToken);
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/import/temu?token=${temuToken}`);
+        const res = await apiFetch(`/api/import/temu?token=${temuToken}`);
         const data = await res.json();
         if (data.ready && data.produto) {
           clearInterval(pollingRef.current!);
@@ -134,7 +135,7 @@ function AdminImportarPage() {
     setTemuAguardar(true);
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/import/temu?token=${token}`);
+        const res = await apiFetch(`/api/import/temu?token=${token}`);
         const data = await res.json();
         if (data.ready && data.produto) {
           clearInterval(pollingRef.current!);
@@ -151,10 +152,10 @@ function AdminImportarPage() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/config/categorias').then(r => r.json()).then(d => setCatTree(d.categorias || [])).catch(() => {});
-    fetch('/api/config/taxas').then(r => r.json()).then(d => setTaxas(d.itens || [])).catch(() => {});
+    apiFetch('/api/config/categorias').then(r => r.json()).then(d => setCatTree(d.categorias || [])).catch(() => {});
+    apiFetch('/api/config/taxas').then(r => r.json()).then(d => setTaxas(d.itens || [])).catch(() => {});
 
-    fetch('/api/tradeflow/conta')
+    apiFetch('/api/tradeflow/conta')
       .then(r => r.json())
       .then(data => {
         const conta = data.conta;
@@ -183,7 +184,7 @@ function AdminImportarPage() {
     setLoading(true);
     setResultado(null);
     try {
-      const res = await fetch('/api/scrape', {
+      const res = await apiFetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
@@ -234,7 +235,7 @@ function AdminImportarPage() {
     setSalvando(true);
     try {
       const precoFinal = taxas.length > 0 ? aplicarTaxas(Number(ajustes.preco) || 0, taxas) : Number(ajustes.preco) || 0;
-      const res = await fetch('/api/produtos', {
+      const res = await apiFetch('/api/produtos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...ajustes, preco: precoFinal, fonte: resultado?.fonte, url_origem: resultado?.url }),

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 
 export async function POST(req: NextRequest) {
+  const negado = await exigirAdmin(req);
+  if (negado) return negado;
+
   const tfUrl = process.env.TRADEFLOW_API_URL;
   if (!tfUrl) return NextResponse.json({ error: 'TradeFlow não configurado' }, { status: 503 });
 

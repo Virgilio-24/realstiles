@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { exigirAdmin } from '@/lib/api-auth';
 
 const API = process.env.NOTIFY_API_URL || 'http://localhost:3010';
 const KEY = process.env.NOTIFY_API_KEY || '';
 
-export async function GET() {
+export async function GET(req: Request) {
+  const negado = await exigirAdmin(req);
+  if (negado) return negado;
+
   try {
     const res = await fetch(`${API}/status`, {
       headers: { Authorization: `Bearer ${KEY}` },

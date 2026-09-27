@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 
 interface Props {
   site: string;
@@ -21,7 +22,7 @@ export default function CookieCapturePopup({ site, url, onClose, onRetry }: Prop
     setStep('capturing');
     setErro('');
     try {
-      const r = await fetch('/api/tradeflow/session/capture', {
+      const r = await apiFetch('/api/tradeflow/session/capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: productUrl }),
@@ -40,7 +41,7 @@ export default function CookieCapturePopup({ site, url, onClose, onRetry }: Prop
     setStep('saving');
     setErro('');
     try {
-      const r = await fetch('/api/tradeflow/session/save', {
+      const r = await apiFetch('/api/tradeflow/session/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: productUrl }),

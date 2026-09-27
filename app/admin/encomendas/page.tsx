@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Package, Mail, MapPin, Phone, FileText, Download } from 'lucide-react';
@@ -53,14 +54,14 @@ export default function AdminEncomendasPage() {
             cancelada: 'foi cancelada. Contacta-nos se precisares de ajuda.',
           };
           const mensagem = `${icones[estado] || '📦'} *Encomenda ${referenciaEncomenda(seleccionada)}*\n\nA tua encomenda ${msgs[estado] || `foi actualizada para ${estado}`}.\n\nVer detalhes: realstiles.co.mz/encomenda/${id}`;
-          fetch('/api/notify/messages/send', {
+          apiFetch('/api/notify/messages/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ telefone: tel, mensagem }),
           }).catch(() => {});
         }
       } else if (seleccionada?.cliente_email) {
-        fetch('/api/send-email', {
+        apiFetch('/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

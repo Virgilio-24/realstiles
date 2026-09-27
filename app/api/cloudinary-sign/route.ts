@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { adminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { autenticar } from '@/lib/api-auth';
 
 // Formatos permitidos a clientes (fotos das avaliações). Os admins podem
 // enviar qualquer imagem ou vídeo.
@@ -13,23 +13,13 @@ export async function POST(req: Request) {
   const folder     = process.env.CLOUDINARY_FOLDER || 'realstiles';
 
   // Só utilizadores autenticados podem obter uma assinatura de upload
-  const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  if (!token) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-
-  let uid: string;
-  try {
-    uid = (await adminAuth.verifyIdToken(token)).uid;
-  } catch {
-    return NextResponse.json({ error: 'Sessão inválida' }, { status: 401 });
-  }
+  const caller = await autenticar(req);
+  if (caller instanceof NextResponse) return caller;
+  const { isAdmin } = caller;
 
   if (!cloudName || !apiKey || !apiSecret) {
     return NextResponse.json({ error: 'Cloudinary não configurado' }, { status: 500 });
   }
-
-  const db = getAdminDb();
-  const perfil = db ? await db.collection('clientes').doc(uid).get() : null;
-  const isAdmin = perfil?.data()?.admin === true;
 
   // Clientes: pasta própria e só imagens (allowed_formats vai assinado, o
   // Cloudinary rejeita o upload se o cliente o tentar alterar ou remover)

@@ -1,5 +1,6 @@
 'use client';
 import { Suspense, useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from '@/components/CloudImage';
 import Link from 'next/link';
@@ -46,11 +47,8 @@ function ContaInner() {
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/tradeflow/conta').then(r => r.json()).catch(() => ({})),
-      fetch('/api/config/notify').then(r => r.json()).catch(() => ({})),
-    ]).then(([tf, notify]) => {
-      const activo = tf.conta?.whatsapp_ativo === true && notify.whatsapp_login === true;
+    fetch('/api/config/notify').then(r => r.json()).catch(() => ({})).then(notify => {
+      const activo = notify.whatsapp_ativo === true && notify.whatsapp_login === true;
       setWhatsappActivo(activo);
       if (!activo) setMetodo('email');
     });
@@ -100,7 +98,7 @@ function ContaInner() {
     try {
       await registar(form.nome, form.email, form.password, form.telefone);
       mostrarToast('Conta criada! Verifica o teu email para activar a conta.', 'success');
-      fetch('/api/send-email', {
+      apiFetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo: 'bem_vindo', nome: form.nome, email: form.email }),
